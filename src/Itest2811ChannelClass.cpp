@@ -343,6 +343,20 @@ void Itest2811ChannelClass::set_default_property()
 	}
 	else
 		add_wiz_dev_prop(prop_name, prop_desc);
+
+	prop_name = "Channel";
+	prop_desc = "Channel number corresponds to the location of the powersupply card in the controller rack";
+	prop_def  = "";
+	vect_data.clear();
+	if (prop_def.length()>0)
+	{
+		Tango::DbDatum	data(prop_name);
+		data << vect_data ;
+		dev_def_prop.push_back(data);
+		add_wiz_dev_prop(prop_name, prop_desc,  prop_def);
+	}
+	else
+		add_wiz_dev_prop(prop_name, prop_desc);
 }
 
 
@@ -568,8 +582,8 @@ void Itest2811ChannelClass::attribute_factory(vector<Tango::Attr *> &att_list)
 	//	standard_unit	not set for	Current
 	//	display_unit	not set for	Current
 	current_prop.set_format("%6.4f");
-	current_prop.set_max_value("1.8");
-	current_prop.set_min_value("-1.8");
+	current_prop.set_max_value("5.0");
+	current_prop.set_min_value("-5.0");
 	//	max_alarm	not set for	Current
 	//	min_alarm	not set for	Current
 	//	max_warning	not set for	Current
@@ -628,8 +642,8 @@ void Itest2811ChannelClass::attribute_factory(vector<Tango::Attr *> &att_list)
 	impedance_prop.set_format("%4.2f");
 	//	max_value	not set for	Impedance
 	//	min_value	not set for	Impedance
-	impedance_prop.set_max_alarm("5.0");
-	impedance_prop.set_min_alarm("2.8");
+	//	max_alarm	not set for	Impedance
+	//	min_alarm	not set for	Impedance
 	//	max_warning	not set for	Impedance
 	//	min_warning	not set for	Impedance
 	//	delta_t	not set for	Impedance

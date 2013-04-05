@@ -30,7 +30,7 @@
 
 
 #include <tango.h>
-
+#include <ClassMagnet.h>
 /*----- PROTECTED REGION END -----*/
 
 
@@ -66,6 +66,10 @@ public:		//	Magnet:	Name of the Magnet
 	Tango::DevShort	pole;
 	//	IP:	
 	string	iP;
+	//	Channel:	Channel number corresponds to the location of the powersupply card in the controller rack
+	Tango::DevUShort	channel;
+	
+	bool	mandatoryNotDefined;
 	
 //	Attribute data members
 public:
@@ -124,6 +128,10 @@ public:
 	 *	Always executed method before execution command method.
 	 */
 	virtual void always_executed_hook();
+	/**
+	 *	Check if mandatory property has been set
+	 */
+	 void check_mandatory_property(Tango::DbDatum &class_prop, Tango::DbDatum &dev_prop);
 
 
 //	Attribute methods
@@ -214,7 +222,8 @@ public:
 	/*----- PROTECTED REGION ID(Itest2811Channel::Additional Method prototypes) ENABLED START -----*/
 
 	//	Additional Method prototypes
-
+private:
+   itest::itPole2811* powersupply;
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::Additional Method prototypes
 
 };

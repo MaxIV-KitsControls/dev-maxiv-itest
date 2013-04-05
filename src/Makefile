@@ -66,7 +66,7 @@ OUTPUT_DIR = ./bin/$(BIN_DIR)
 #   - '-I ../include' and '-I .' are automatically appended in all cases
 #
 #
-INC_DIR_USER= -I . 
+INC_DIR_USER= -I . -I ../../lib-itest-magnet2811/src
 
 
 #=============================================================================
@@ -74,7 +74,7 @@ INC_DIR_USER= -I .
 #   - for a device server, tango libraries directories are automatically appended
 #   - '-L ../lib' is automatically appended in all cases
 #
-LIB_DIR_USER=
+LIB_DIR_USER=-L ../../lib-itest-magnet2811/lib
 
 #=============================================================================
 # LFLAGS_USR is the list of user link flags
@@ -87,7 +87,7 @@ LIB_DIR_USER=
 # you must use '-lA -lB' in this order as link flags, otherwise you will get
 # 'undefined reference' errors
 #
-#LFLAGS_USR+=
+LFLAGS_USR+= -lMagnet
 
 
 #=============================================================================

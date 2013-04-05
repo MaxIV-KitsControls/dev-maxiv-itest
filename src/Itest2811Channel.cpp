@@ -66,9 +66,9 @@ namespace Itest2811Channel_ns
 {
 	/*----- PROTECTED REGION ID(Itest2811Channel::namespace_starting) ENABLED START -----*/
 
-	//	static initializations
+   //	static initializations
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::namespace_starting
+   /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::namespace_starting
 
 
 
@@ -84,9 +84,9 @@ Itest2811Channel::Itest2811Channel(Tango::DeviceClass *cl, string &s)
 {
 	/*----- PROTECTED REGION ID(Itest2811Channel::constructor_1) ENABLED START -----*/
 
-	init_device();
+      init_device();
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::constructor_1
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::constructor_1
 }
 //--------------------------------------------------------
 Itest2811Channel::Itest2811Channel(Tango::DeviceClass *cl, const char *s)
@@ -94,9 +94,9 @@ Itest2811Channel::Itest2811Channel(Tango::DeviceClass *cl, const char *s)
 {
 	/*----- PROTECTED REGION ID(Itest2811Channel::constructor_2) ENABLED START -----*/
 
-	init_device();
+      init_device();
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::constructor_2
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::constructor_2
 }
 //--------------------------------------------------------
 Itest2811Channel::Itest2811Channel(Tango::DeviceClass *cl, const char *s, const char *d)
@@ -104,9 +104,9 @@ Itest2811Channel::Itest2811Channel(Tango::DeviceClass *cl, const char *s, const 
 {
 	/*----- PROTECTED REGION ID(Itest2811Channel::constructor_3) ENABLED START -----*/
 
-	init_device();
+      init_device();
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::constructor_3
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::constructor_3
 }
 
 
@@ -121,9 +121,16 @@ void Itest2811Channel::delete_device()
 	DEBUG_STREAM << "Itest2811Channel::delete_device() " << device_name << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::delete_device) ENABLED START -----*/
 
-	//	Delete device allocated objects
-
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::delete_device
+      //	Delete device allocated objects
+      delete powersupply;
+      powersupply = 0;
+      delete attr_Current_read;
+      attr_Current_read = 0;
+      delete attr_Voltage_read;
+      attr_Voltage_read = 0;
+      delete attr_Impedance_read;
+      attr_Impedance_read = 0;
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::delete_device
 	
 	
 }
@@ -142,19 +149,44 @@ void Itest2811Channel::init_device()
 
 	/*----- PROTECTED REGION ID(Itest2811Channel::init_device_before) ENABLED START -----*/
 
-	//	Initialization before get_device_property() call
+      //	Initialization before get_device_property() call
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::init_device_before
+      attr_Current_read = new Tango::DevDouble();
+      attr_Voltage_read = new Tango::DevDouble();
+      attr_Impedance_read = new Tango::DevDouble();
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::init_device_before
 	
 	//	Get the device properties (if any) from database
 	get_device_property();
+	if (mandatoryNotDefined)
+		return;
 	
 	
 	/*----- PROTECTED REGION ID(Itest2811Channel::init_device) ENABLED START -----*/
 
-	//	Initialize device
-
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::init_device
+      //	Initialize device
+      this->set_state(Tango::INIT);
+      try {
+         DEBUG_STREAM << "Configure a new channel with IP " << this->iP << std::endl;
+         powersupply = new itest::itPole2811(this->iP.c_str(), 1, this->channel);
+         this->set_status("Communication OK");
+         
+      }
+      catch (itest::ItestException &e)
+      {
+         std::stringstream message;
+         for (unsigned int i = 0; i < e.errors.size(); i++) {
+            message << e.errors[i].reason << " , " << e.errors[i].desc << " , " << e.errors[i].origin << " , " << e.errors[i].code << std::endl;
+         }
+         this->set_state(Tango::FAULT);
+         this->set_status(message.str());
+      }
+      catch (...)
+      {
+         ERROR_STREAM << "UNKNOWN KNOWN ERRRRRRROR" << std::endl;
+         this->set_state(Tango::UNKNOWN);
+      }
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::init_device
 }
 
 
@@ -169,16 +201,19 @@ void Itest2811Channel::get_device_property()
 {
 	/*----- PROTECTED REGION ID(Itest2811Channel::get_device_property_before) ENABLED START -----*/
 
-	//	Initialize property data members
+      //	Initialize property data members
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::get_device_property_before
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::get_device_property_before
 
+	mandatoryNotDefined = false;
+	set_status("Initializing....");
 
 	//	Read device properties from database.
 	Tango::DbData	dev_prop;
 	dev_prop.push_back(Tango::DbDatum("Magnet"));
 	dev_prop.push_back(Tango::DbDatum("Pole"));
 	dev_prop.push_back(Tango::DbDatum("IP"));
+	dev_prop.push_back(Tango::DbDatum("Channel"));
 
 	//	is there at least one property to be read ?
 	if (dev_prop.size()>0)
@@ -226,14 +261,56 @@ void Itest2811Channel::get_device_property()
 		//	And try to extract IP value from database
 		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  iP;
 
+		//	Try to initialize Channel from class property
+		cl_prop = ds_class->get_class_property(dev_prop[++i].name);
+		if (cl_prop.is_empty()==false)	cl_prop  >>  channel;
+		else {
+			//	Try to initialize Channel from default device value
+			def_prop = ds_class->get_default_device_property(dev_prop[i].name);
+			if (def_prop.is_empty()==false)	def_prop  >>  channel;
+		}
+		//	And try to extract Channel value from database
+		if (dev_prop[i].is_empty()==false)	dev_prop[i]  >>  channel;
+		//	Property Channel is mandatory, check if has been defined in database.
+		check_mandatory_property(cl_prop, dev_prop[i]);
+
 
 	}
 	/*----- PROTECTED REGION ID(Itest2811Channel::get_device_property_after) ENABLED START -----*/
 
-	//	Check device property data members init
+      //	Check device property data members init
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::get_device_property_after
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::get_device_property_after
 
+}
+//--------------------------------------------------------
+/**
+ *	Method      : Itest2811Channel::check_mandatory_property()
+ *	Description : For mandatory properties check if defined in database.
+ */
+//--------------------------------------------------------
+void Itest2811Channel::check_mandatory_property(Tango::DbDatum &class_prop, Tango::DbDatum &dev_prop)
+{
+	//	Check if all properties are empty
+	if (class_prop.is_empty() && dev_prop.is_empty())
+	{
+		TangoSys_OMemStream	tms;
+		tms << endl <<"Property \'" << dev_prop.name;
+		if (Tango::Util::instance()->_UseDb==true)
+			tms << "\' is mandatory but not defined in database";
+		else
+			tms << "\' is mandatory but cannot be defined without database";
+		string	status(get_status());
+		status += tms.str();
+		set_status(status);
+		mandatoryNotDefined = true;
+	/*----- PROTECTED REGION ID(Itest2811Channel::check_mandatory_property) ENABLED START -----*/
+
+         cerr << tms.str() << " for " << device_name << endl;
+
+         /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::check_mandatory_property
+
+	}
 }
 
 
@@ -246,12 +323,21 @@ void Itest2811Channel::get_device_property()
 void Itest2811Channel::always_executed_hook()
 {
 	INFO_STREAM << "Itest2811Channel::always_executed_hook()  " << device_name << endl;
-	
+	 
+	if (mandatoryNotDefined)
+	{
+		string	status(get_status());
+		Tango::Except::throw_exception(
+					(const char *)"PROPERTY_NOT_SET",
+					status.c_str(),
+					(const char *)"Itest2811Channel::always_executed_hook()");
+	}
+
 	/*----- PROTECTED REGION ID(Itest2811Channel::always_executed_hook) ENABLED START -----*/
 
-	//	code always executed before all requests
+      //	code always executed before all requests
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::always_executed_hook
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::always_executed_hook
 }
 
 
@@ -268,9 +354,9 @@ void Itest2811Channel::read_attr_hardware(TANGO_UNUSED(vector<long> &attr_list))
 	DEBUG_STREAM << "Itest2811Channel::read_attr_hardware(vector<long> &attr_list) entering... " << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_attr_hardware) ENABLED START -----*/
 
-	//	Add your own code
+      //	Add your own code
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_attr_hardware
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_attr_hardware
 
 }
 
@@ -289,10 +375,11 @@ void Itest2811Channel::read_Current(Tango::Attribute &attr)
 	DEBUG_STREAM << "Itest2811Channel::read_Current(Tango::Attribute &attr) entering... " << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_Current) ENABLED START -----*/
 
-	//	Set the attribute value
-	attr.set_value(attr_Current_read);
+      //	Set the attribute value
+      *attr_Current_read = powersupply->get_measure_current();
+      attr.set_value(attr_Current_read);
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_Current
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_Current
 }
 	
 //--------------------------------------------------------
@@ -312,10 +399,10 @@ void Itest2811Channel::write_Current(Tango::WAttribute &attr)
 	attr.get_write_value(w_val);
 	
 	/*----- PROTECTED REGION ID(Itest2811Channel::write_Current) ENABLED START -----*/
+      powersupply->set_current(w_val);
 
-	
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::write_Current
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::write_Current
 }
 
 //--------------------------------------------------------
@@ -332,10 +419,11 @@ void Itest2811Channel::read_Voltage(Tango::Attribute &attr)
 	DEBUG_STREAM << "Itest2811Channel::read_Voltage(Tango::Attribute &attr) entering... " << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_Voltage) ENABLED START -----*/
 
-	//	Set the attribute value
-	attr.set_value(attr_Voltage_read);
+      //	Set the attribute value
+      *attr_Voltage_read = powersupply->get_measure_voltage();
+      attr.set_value(attr_Voltage_read);
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_Voltage
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_Voltage
 }
 
 //--------------------------------------------------------
@@ -352,10 +440,11 @@ void Itest2811Channel::read_Impedance(Tango::Attribute &attr)
 	DEBUG_STREAM << "Itest2811Channel::read_Impedance(Tango::Attribute &attr) entering... " << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_Impedance) ENABLED START -----*/
 
-	//	Set the attribute value
-	attr.set_value(attr_Impedance_read);
+      //	Set the attribute value
+      *attr_Impedance_read = powersupply->get_measure_voltage() / powersupply->get_measure_current() ;
+      attr.set_value(attr_Impedance_read);
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_Impedance
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_Impedance
 }
 
 
@@ -372,9 +461,9 @@ void Itest2811Channel::add_dynamic_attributes()
 	
 	/*----- PROTECTED REGION ID(Itest2811Channel::add_dynamic_attributes) ENABLED START -----*/
 
-	//	Add your own code to create and add dynamic attributes if any
+      //	Add your own code to create and add dynamic attributes if any
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::add_dynamic_attributes()
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::add_dynamic_attributes()
 }
 
 
@@ -396,10 +485,37 @@ Tango::DevState Itest2811Channel::dev_state()
 {
 	DEBUG_STREAM << "Itest2811Channel::State()  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::dev_state) ENABLED START -----*/
+      Tango::DevState argout = DeviceImpl::dev_state();
 
-	Tango::DevState	argout = Tango::UNKNOWN; // replace by your own algorithm
+      if (Tango::FAULT!=argout && Tango::UNKNOWN!=argout ) {
+         try {
+            if (powersupply->get_state() == MAGNET_OFF) {
+               argout = Tango::OFF;
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::dev_state
+            } else // it's a boolean if (channel->get_state() == MAGNET_ON) {
+               if (!powersupply->get_current_slope_completion() || !powersupply->get_current_tracking_status()) {
+               argout = Tango::MOVING;
+
+            } else {
+               argout = Tango::ON;
+            }
+         }
+         catch (itest::ItestException &e)
+         {
+            std::stringstream message;
+            for (unsigned int i = 0; i < e.errors.size(); i++) {
+               message << e.errors[i].reason << " , " << e.errors[i].desc << " , " << e.errors[i].origin << " , " << e.errors[i].code << std::endl;
+            }
+            argout = Tango::FAULT;
+            this->set_status(message.str());
+         }
+         catch (...)
+         {
+            ERROR_STREAM << "ERRRRRRROR" << std::endl;
+            argout = Tango::UNKNOWN;
+         }
+      }
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::dev_state
 
 	set_state(argout);    // Give the state to Tango.
 	if (argout!=Tango::ALARM)
@@ -422,10 +538,9 @@ Tango::ConstDevString Itest2811Channel::dev_status()
 	DEBUG_STREAM << "Itest2811Channel::Status()  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::dev_status) ENABLED START -----*/
 
-	string	status = "Device is OK";
-		//	Add your own status management
+      string status = DeviceImpl::dev_status(); // Return it.
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::dev_status
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::dev_status
 
 	set_status(status);               // Give the status to Tango.
 	return DeviceImpl::dev_status();  // Return it.
@@ -446,9 +561,11 @@ void Itest2811Channel::on()
 	DEBUG_STREAM << "Itest2811Channel::On()  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::on) ENABLED START -----*/
 
-	//	Add your own code
-
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::on
+      //	Add your own code
+      if (powersupply->get_state() == MAGNET_OFF) {
+         powersupply->set_state(MAGNET_ON);
+      }
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::on
 
 }
 
@@ -466,9 +583,11 @@ void Itest2811Channel::off()
 	DEBUG_STREAM << "Itest2811Channel::Off()  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::off) ENABLED START -----*/
 
-	//	Add your own code
-
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::off
+      //	Add your own code
+      if (powersupply->get_state() == MAGNET_ON) {
+         powersupply->set_state(MAGNET_OFF);
+      }
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::off
 
 }
 
@@ -486,160 +605,162 @@ void Itest2811Channel::reset()
 	DEBUG_STREAM << "Itest2811Channel::Reset()  - " << device_name << endl;
 	/*----- PROTECTED REGION ID(Itest2811Channel::reset) ENABLED START -----*/
 
-	//	Add your own code
-
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::reset
+      //	Add your own code
+      powersupply->clear_alarm();
+      powersupply->clear_all_err();
+      powersupply->set_current(0.0);
+      /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::reset
 
 }
 
 
 	/*----- PROTECTED REGION ID(Itest2811Channel::namespace_ending) ENABLED START -----*/
 
-	//	Additional Methods
-// //--------------------------------------------------------
-// /**
-//  *	Read SetCurrentRMS attribute
-//  *	Description: Statistic when driven by the Libera.\nRMS value of the AC setpoint applied on the DAC during the last second.\nX=sqr( (sum(setAC)*sum(setAC)) / n - ((sum(setAC)/n) *(sum(setAC)/n)) )
-//  *
-//  *	Data type:	Tango::DevDouble
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_SetCurrentRMS(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_SetCurrentRMS(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_SetCurrentRMS_read);
-// }
+   //	Additional Methods
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read SetCurrentRMS attribute
+   //  *	Description: Statistic when driven by the Libera.\nRMS value of the AC setpoint applied on the DAC during the last second.\nX=sqr( (sum(setAC)*sum(setAC)) / n - ((sum(setAC)/n) *(sum(setAC)/n)) )
+   //  *
+   //  *	Data type:	Tango::DevDouble
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_SetCurrentRMS(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_SetCurrentRMS(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_SetCurrentRMS_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read SetCurrentAverage attribute
-//  *	Description: Statistic when driven by the Libera.\nThe average AC setpoint applied to the DAC during the last second.\nX=SUM(setAC)/n
-//  *
-//  *	Data type:	Tango::DevDouble
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_SetCurrentAverage(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_SetCurrentAverage(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_SetCurrentAverage_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read SetCurrentAverage attribute
+   //  *	Description: Statistic when driven by the Libera.\nThe average AC setpoint applied to the DAC during the last second.\nX=SUM(setAC)/n
+   //  *
+   //  *	Data type:	Tango::DevDouble
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_SetCurrentAverage(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_SetCurrentAverage(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_SetCurrentAverage_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read FramesPerSecond attribute
-//  *	Description: Statistic when driven by the Libera.\nThe number of setpoints per second.
-//  *
-//  *	Data type:	Tango::DevULong
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_FramesPerSecond(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_FramesPerSecond(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_FramesPerSecond_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read FramesPerSecond attribute
+   //  *	Description: Statistic when driven by the Libera.\nThe number of setpoints per second.
+   //  *
+   //  *	Data type:	Tango::DevULong
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_FramesPerSecond(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_FramesPerSecond(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_FramesPerSecond_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read ErrorPerSecond attribute
-//  *	Description: Statistic when driven by the Libera.\nThe number of errors detected per second.
-//  *
-//  *	Data type:	Tango::DevULong
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_ErrorPerSecond(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_ErrorPerSecond(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_ErrorPerSecond_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read ErrorPerSecond attribute
+   //  *	Description: Statistic when driven by the Libera.\nThe number of errors detected per second.
+   //  *
+   //  *	Data type:	Tango::DevULong
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_ErrorPerSecond(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_ErrorPerSecond(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_ErrorPerSecond_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read ErrorCounter attribute
-//  *	Description: Statistic when driven by the Libera.\nThe total number of errors since the last reset.
-//  *
-//  *	Data type:	Tango::DevULong
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_ErrorCounter(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_ErrorCounter(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_ErrorCounter_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read ErrorCounter attribute
+   //  *	Description: Statistic when driven by the Libera.\nThe total number of errors since the last reset.
+   //  *
+   //  *	Data type:	Tango::DevULong
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_ErrorCounter(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_ErrorCounter(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_ErrorCounter_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read LocalControl attribute
-//  *	Description: If true the AC current can be set on the device,\notherwise it is driven by the Libera.
-//  *
-//  *	Data type:	Tango::DevBoolean
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_LocalControl(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_LocalControl(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_LocalControl_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read LocalControl attribute
+   //  *	Description: If true the AC current can be set on the device,\notherwise it is driven by the Libera.
+   //  *
+   //  *	Data type:	Tango::DevBoolean
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_LocalControl(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_LocalControl(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_LocalControl_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read SetCurrentAC attribute
-//  *	Description: The AC current setpoint in local mode. If driven by the Libera, the attribute \nattribute value in INVALID.
-//  *
-//  *	Data type:	Tango::DevDouble
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_SetCurrentAC(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_SetCurrentAC(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_SetCurrentAC_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read SetCurrentAC attribute
+   //  *	Description: The AC current setpoint in local mode. If driven by the Libera, the attribute \nattribute value in INVALID.
+   //  *
+   //  *	Data type:	Tango::DevDouble
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_SetCurrentAC(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_SetCurrentAC(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_SetCurrentAC_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read Temperature1 attribute
-//  *	Description: Temperature 1 of the pole.
-//  *
-//  *	Data type:	Tango::DevDouble
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_Temperature1(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_Temperature1(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_Temperature1_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read Temperature1 attribute
+   //  *	Description: Temperature 1 of the pole.
+   //  *
+   //  *	Data type:	Tango::DevDouble
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_Temperature1(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_Temperature1(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_Temperature1_read);
+   // }
 
-// //--------------------------------------------------------
-// /**
-//  *	Read Temperature2 attribute
-//  *	Description: Temperature 2 of the pole.
-//  *
-//  *	Data type:	Tango::DevDouble
-//  *	Attr type:	Scalar 
-//  */
-// //--------------------------------------------------------
-// void Itest2811Channel::read_Temperature2(Tango::Attribute &attr)
-// {
-// 	DEBUG_STREAM << "Itest2811Channel::read_Temperature2(Tango::Attribute &attr) entering... " << endl;
-// 	//	Set the attribute value
-// 	attr.set_value(attr_Temperature2_read);
-// }
+   // //--------------------------------------------------------
+   // /**
+   //  *	Read Temperature2 attribute
+   //  *	Description: Temperature 2 of the pole.
+   //  *
+   //  *	Data type:	Tango::DevDouble
+   //  *	Attr type:	Scalar 
+   //  */
+   // //--------------------------------------------------------
+   // void Itest2811Channel::read_Temperature2(Tango::Attribute &attr)
+   // {
+   // 	DEBUG_STREAM << "Itest2811Channel::read_Temperature2(Tango::Attribute &attr) entering... " << endl;
+   // 	//	Set the attribute value
+   // 	attr.set_value(attr_Temperature2_read);
+   // }
 
 
-	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::namespace_ending
+   /*----- PROTECTED REGION END -----*/	//	Itest2811Channel::namespace_ending
 } //	namespace

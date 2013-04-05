@@ -42,6 +42,7 @@ static const char *RcsId = "$Id:  $";
  * FAULT :	Error detected by the BILT magnet. 
  * ALARM :	Alarm detected on one or more channels. 
  * UNKNOWN :	Communication fault 
+ * MOVING :	Waiting for the current slope completion 
  */
 
 namespace Itest2811Channel_ns
@@ -62,21 +63,32 @@ bool Itest2811Channel::is_Current_allowed(TANGO_UNUSED(Tango::AttReqType type))
 	//	Check if access type.
 	if ( type!=Tango::READ_REQ )
 	{
-			//	Not any excluded states for Current attribute in WRITE access.
+		if (	//	Compare device state with not allowed states for WRITE 
+			get_state() == Tango::FAULT	|| 
+			get_state() == Tango::UNKNOWN	|| 
+			get_state() == Tango::MOVING)
+		{
 		
 	/*----- PROTECTED REGION ID(Itest2811Channel::CurrentStateAllowed_WRITE) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::CurrentStateAllowed_WRITE
 
+			return false;
+		}
 		return true;
 	}
 	else
-		//	Not any excluded states for Current attribute in READ access.
+	if (	//	Compare device state with not allowed states for READ 
+		get_state() == Tango::FAULT	|| 
+		get_state() == Tango::UNKNOWN)
+	{
 	
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_CurrentStateAllowed_READ) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_CurrentStateAllowed_READ
 
+		return false;
+	}
 	return true;
 }
 
@@ -89,12 +101,17 @@ bool Itest2811Channel::is_Current_allowed(TANGO_UNUSED(Tango::AttReqType type))
 
 bool Itest2811Channel::is_Voltage_allowed(TANGO_UNUSED(Tango::AttReqType type))
 {
-		//	Not any excluded states for Voltage attribute in READ access.
+	if (	//	Compare device state with not allowed states for READ 
+		get_state() == Tango::FAULT	|| 
+		get_state() == Tango::UNKNOWN)
+	{
 	
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_VoltageStateAllowed_READ) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_VoltageStateAllowed_READ
 
+		return false;
+	}
 	return true;
 }
 
@@ -107,12 +124,17 @@ bool Itest2811Channel::is_Voltage_allowed(TANGO_UNUSED(Tango::AttReqType type))
 
 bool Itest2811Channel::is_Impedance_allowed(TANGO_UNUSED(Tango::AttReqType type))
 {
-		//	Not any excluded states for Impedance attribute in READ access.
+	if (	//	Compare device state with not allowed states for READ 
+		get_state() == Tango::FAULT	|| 
+		get_state() == Tango::UNKNOWN)
+	{
 	
 	/*----- PROTECTED REGION ID(Itest2811Channel::read_ImpedanceStateAllowed_READ) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::read_ImpedanceStateAllowed_READ
 
+		return false;
+	}
 	return true;
 }
 
@@ -143,12 +165,17 @@ bool Itest2811Channel::is_Impedance_allowed(TANGO_UNUSED(Tango::AttReqType type)
 
 bool Itest2811Channel::is_On_allowed(TANGO_UNUSED(const CORBA::Any &any))
 {
-	//	Not any excluded states for On command.
+	if (	//	Compare device state with not allowed states for command 
+		get_state() == Tango::FAULT	|| 
+		get_state() == Tango::UNKNOWN)
+	{
 
 	/*----- PROTECTED REGION ID(Itest2811Channel::OnStateAllowed) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::OnStateAllowed
 
+		return false;
+	}
 	return true;
 }
 
@@ -161,12 +188,17 @@ bool Itest2811Channel::is_On_allowed(TANGO_UNUSED(const CORBA::Any &any))
 
 bool Itest2811Channel::is_Off_allowed(TANGO_UNUSED(const CORBA::Any &any))
 {
-	//	Not any excluded states for Off command.
+	if (	//	Compare device state with not allowed states for command 
+		get_state() == Tango::FAULT	|| 
+		get_state() == Tango::UNKNOWN)
+	{
 
 	/*----- PROTECTED REGION ID(Itest2811Channel::OffStateAllowed) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::OffStateAllowed
 
+		return false;
+	}
 	return true;
 }
 
@@ -179,12 +211,17 @@ bool Itest2811Channel::is_Off_allowed(TANGO_UNUSED(const CORBA::Any &any))
 
 bool Itest2811Channel::is_Reset_allowed(TANGO_UNUSED(const CORBA::Any &any))
 {
-	//	Not any excluded states for Reset command.
+	if (	//	Compare device state with not allowed states for command 
+		get_state() == Tango::FAULT	|| 
+		get_state() == Tango::UNKNOWN)
+	{
 
 	/*----- PROTECTED REGION ID(Itest2811Channel::ResetStateAllowed) ENABLED START -----*/
 
 	/*----- PROTECTED REGION END -----*/	//	Itest2811Channel::ResetStateAllowed
 
+		return false;
+	}
 	return true;
 }
 
